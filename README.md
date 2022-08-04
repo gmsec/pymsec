@@ -1,2 +1,9 @@
-# pymsec
-python micro service. python 微服务集成框架
+# gmsec服务
+
+这是一个示例服务
+
+生成 proto
+
+```
+make gen
+```

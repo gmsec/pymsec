@@ -1,0 +1,51 @@
+#! /bin/bash
+CC=gcc
+NAME := example
+APIDOCDIR := ../apidoc#文档目录
+RPCCDIR := $(APIDOCDIR)/rpc#rpc输出目录
+
+BUILDSHELLFILE :=`ls $(APIDOCDIR)/proto/$(NAME)/*.proto | cut -d'/' -f5`
+COMMSHELLFILE :=`ls $(APIDOCDIR)/proto/common/*.proto | cut -d'/' -f5`
+
+gen_proto: gen_build gen_base
+clean_proto:
+	rm -f rpc/common/*_pb2.py
+gen_build:# 自定义注册
+	# python -m pip install --upgrade pip
+	# python -m pip install virtualenv
+	# python -m pip install --upgrade pip
+	# python -m pip install grpcio
+	# python -m pip install grpcio-tools
+	@mkdir -p rpc/$(NAME)
+	@echo "gen_build proto"
+	@rm -f rpc/$(NAME)/*_pb2.py
+	@rm -f rpc/$(NAME)/*_pb2_grpc.py
+	echo $(NAME).proto
+	python -m grpc_tools.protoc -I ./ --proto_path=$(APIDOCDIR)/proto/ --grpc_python_out=rpc/ --python_out=rpc/ $(NAME)/$(NAME).proto
+	# @(for files in $(BUILDSHELLFILE); do \
+	# python -m grpc_tools.protoc -I ./ --proto_path=$(APIDOCDIR)/proto/ --grpc_python_out=rpc/ --python_out=rpc/ $(NAME)/$$files; \
+	# echo build $$files; \
+	# python -m grpc_tools.protoc -I ./ --proto_path=$(APIDOCDIR)/proto/ --grpc_python_out=rpc/ --python_out=rpc/ example/hello1.proto; \
+	# done)
+	@sed -i 's/from $(NAME) import/from rpc.$(NAME) import/g' ./rpc/$(NAME)/*_grpc.py #开始取消json omitempty
+	cp -rf ./rpc/$(NAME)/ $(RPCCDIR)/ #子目录向父目录拷贝
+	#@sed -i 's#common "rpc/common"#common "$(NAME)/rpc/common"#g' ./rpc/$(NAME)/*.pb.go #开始替换common包
+	#@sed -i 's#common "rpc/common"#common "$(NAME)/rpc/common"#g' ./rpc/$(NAME)/*.pb.gmsec.go #开始替换common包
+	#@sed -i 's#_ "rpc/common"#_ "$(NAME)/rpc/common"#g' ./rpc/$(NAME)/*.pb.go #开始替换common包
+	#@sed -i 's#_ "rpc/common"#_ "$(NAME)/rpc/common"#g' ./rpc/$(NAME)/*.pb.gmsec.go #开始替换common包
+ 
+gen_base:# 基础库
+	@mkdir -p $(RPCCDIR)/common
+	@echo "gen proto"
+	@rm -f rpc/common/*_pb2.py
+	@rm -f rpc/common/*_pb2_grpc.py
+	echo common_public.proto
+	python -m grpc_tools.protoc -I ./ --proto_path=$(APIDOCDIR)/proto/ --grpc_python_out=$(APIDOCDIR)/rpc/ --python_out=$(APIDOCDIR)/rpc/ common/common_public.proto	
+	# @for file in $(COMMSHELLFILE); do \
+	#  echo base $$file; \
+	#  protoc --proto_path="$(APIDOCDIR)/proto/" --gmsec_out=plugins=gmsec:$(APIDOCDIR)/ common/$$file; \
+	# done;
+	@sed -i 's/from common import/from rpc.common import/g' $(RPCCDIR)/common/*_grpc.py #开始取消json omitempty
+	cp -rf $(RPCCDIR)/common/ ./rpc/ #父目录向当前目录拷贝
+	
+
